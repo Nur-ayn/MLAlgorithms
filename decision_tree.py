@@ -24,20 +24,11 @@ dataset = [
            [[-4], -4]
            ]
 
+dataset = [ [[x], x**2] for x in range(-50,50) ]
+
 datapoints = [ DataPoint(point[0], point[1]) for point in dataset ]
 datapoints = np.array(datapoints)
 
-
-
-# numbers = np.array([ [1, 3, 7],
-#             [0, 5, 9],
-#             [10, 8, -2]])
-
-# print('min')
-# print(numbers[:,2])
-# print(np.argmin(numbers[:,2]))
-# left, right = split(datapoints, np.array([ datapoint.input[0] for datapoint in datapoints ]) < 2)
-# print(left, right)
 
 x = [ point.input[0] for point in datapoints ]
 y = [ point.label for point in datapoints ]
@@ -55,12 +46,13 @@ class Node:
         self.right = None 
 
     def next_node(self, test_point):
-        if self.left is None:
+        if self.left is None and self.right is None:
             return f"the mean is {self.mean}"
+        #print(self)
         if test_point[self.dimension] < self.split_value:
-            return self.next_node(self.left, test_point)
+            return self.left.next_node(test_point)
         if test_point[self.dimension] >= self.split_value:
-            return self.next_node(self.right, test_point)
+            return self.right.next_node(test_point)
 
     def best_split(self):
         '''loops through each dimension of the inputs and each split of the data and returns the one with
@@ -95,16 +87,17 @@ class Node:
         dimension, value = self.best_split()
         print('best split', dimension, value)
         self.dimension = int(dimension)
-        self.value = value
+        self.split_value = value
 
         left, right = split_data(self.data, np.array([ datapoint.input[self.dimension] for datapoint in self.data ]) < value)
-        left_child = Node(left) 
-        right_child = Node(right)
 
         if len(left) != 0:
-            left_child.split_node(levels-1)
+            self.left = Node(left)
+            self.left.split_node(levels-1)
+            
         if len(right) != 0:
-            right_child.split_node(levels-1)
+            self.right = Node(right)
+            self.right.split_node(levels-1)
 
     @staticmethod
     def loss(datapoints, split):
@@ -129,17 +122,17 @@ class Tree:
     def train(self):
         self.root.split_node(levels=self.depth)
 
-    def predict(self, input):
+    def predict(self, inputs):
         '''takes a data point and runs through the splits'''
-        return self.root.next_node(input)
+        return [ self.root.next_node(input) for input in inputs ]
 
 
 print("--------------------------START------------------------------------------")
 
 root_node = Node(datapoints)
-decision_tree = Tree(root_node, depth=6)
+decision_tree = Tree(root_node, depth=25)
 decision_tree.train()
-print(decision_tree.predict([3.5]))
+print(decision_tree.predict([[3.5], [1.2], [10.5]]))
 
 # take a dataset with (x1,x2,x3) and y labels
 # splits = []
