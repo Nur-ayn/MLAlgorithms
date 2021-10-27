@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
 
+#plt.ion()
+
 def split_data(arr, cond):
       return [arr[cond], arr[~cond]]
 
@@ -24,7 +26,7 @@ dataset = [
            [[-4], -4]
            ]
 
-dataset = [ [[x], x**2] for x in range(-50,50) ]
+dataset = [ [[x], x] for x in range(-15, 15) ]
 
 datapoints = [ DataPoint(point[0], point[1]) for point in dataset ]
 datapoints = np.array(datapoints)
@@ -33,8 +35,8 @@ datapoints = np.array(datapoints)
 x = [ point.input[0] for point in datapoints ]
 y = [ point.label for point in datapoints ]
 
-plt.scatter(x,y)
-plt.show()
+plt.plot(x,y, zorder=0)
+
 
 class Node:
     def __init__(self, data):
@@ -46,9 +48,10 @@ class Node:
         self.right = None 
 
     def next_node(self, test_point):
-        if self.left is None and self.right is None:
+        if self.split_value is None:
             return f"the mean is {self.mean}"
-        #print(self)
+        print('split value', self.split_value)
+        print('left and right', self.left, self.right)
         if test_point[self.dimension] < self.split_value:
             return self.left.next_node(test_point)
         if test_point[self.dimension] >= self.split_value:
@@ -59,9 +62,9 @@ class Node:
             minimal square loss -- needs to be optimised with some analysis'''
         splits = []
         for dimension in range(len(self.data[0].input)):
-            print('DATADATADATa', self.data)
+            #print('DATADATADATa', self.data)
             values = [ datapoint.input[dimension] for datapoint in self.data]
-            print("ALL THE ValUEs", values)
+            #print("ALL THE ValUEs", values)
             for value in values:
                 split = [dimension, value]
                 left, right = split_data(self.data, np.array([ datapoint.input[dimension] for datapoint in self.data ]) < value)
@@ -72,24 +75,30 @@ class Node:
                 splits.append(split)
 
         splits = np.array(splits)
-        print('considered splits', splits)
+        #print('considered splits', splits)
         
-        print('mean', self.mean)
+        #print('mean', self.mean)
         optimal_split = splits[np.argmin(splits[:,2])]  #getting split with smallest loss
-        print('optimal split', optimal_split)
+        # print('optimal split', optimal_split)
 
         return optimal_split[0], optimal_split[1]
 
     def split_node(self, levels=6):
         if levels == 0:
+            self.plot_node()
             print("done training")
             return
         dimension, value = self.best_split()
         print('best split', dimension, value)
         self.dimension = int(dimension)
-        self.split_value = value
 
         left, right = split_data(self.data, np.array([ datapoint.input[self.dimension] for datapoint in self.data ]) < value)
+
+        if len(left) == 0 or len(right) == 0:
+            print('data no split', self.data)
+            return
+
+        self.split_value = value
 
         if len(left) != 0:
             self.left = Node(left)
@@ -103,13 +112,18 @@ class Node:
     def loss(datapoints, split):
         if len(datapoints) == 0:
             return 0
-        if split[1] == -4:
-            print('losses for -4')
-            print(datapoints)
             
         mean_label = np.mean( [datapoint.label for datapoint in datapoints])
         print([ (datapoint.label - mean_label)**2 for datapoint in datapoints ])
         return 1/len(datapoints)*np.sum([ (datapoint.label - mean_label)**2 for datapoint in datapoints ])
+
+    def plot_node(self):
+        datapoints = self.data
+        x = np.array([ datapoint.input[0] for datapoint in datapoints ])
+        y = [self.mean for _ in range(len(x)) ]
+        print("TRYING TO PLOT ", x, y)
+        plt.scatter(x, y, zorder=5)
+        plt.draw()
 
 
 
@@ -130,18 +144,15 @@ class Tree:
 print("--------------------------START------------------------------------------")
 
 root_node = Node(datapoints)
-decision_tree = Tree(root_node, depth=25)
+decision_tree = Tree(root_node, depth=10)
 decision_tree.train()
-print(decision_tree.predict([[3.5], [1.2], [10.5]]))
+inputs = [[0],
+          [-10],
+          [3.5],
+          [1.2],
+          [10.5]
+         ]
+print(decision_tree.predict(inputs))
 
-# take a dataset with (x1,x2,x3) and y labels
-# splits = []
-# for dimension in len(xvector): 
-#      get all values of this dimension in data-set
-#      for each value:
-#           split = [dimension, value] (index, float)
-#           partition datapoints array according to datapoint.input >= value
-#           loss = loss(arr1) + loss(arr2)
-#           split.append(loss)
-#           splits.append(split)  now [dimension, value, loss]
-# return min(splits - sorting by 3rd entry (loss))
+
+plt.show()
