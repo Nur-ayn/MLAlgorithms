@@ -1,27 +1,25 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
+from typing import Any, List
 
-#plt.ion()
 
-def split_data(arr, cond):
-      return [arr[cond], arr[~cond]]
+def split_data(dataset, value):
+    left, right = dataset.inputs < value, dataset.inputs >= value
+    i_left, i_right = np.where(left)[0], np.where(right)[0]
+    left_inputs, right_inputs = dataset.inputs[i_left], dataset.inputs[i_right]
+    left_labels, right_labels = dataset.labels[i_left], dataset.labels[i_right]
+
+    return DataSet(left_inputs, left_labels), DataSet(right_inputs, right_labels)
 
 
 @dataclass
-class DataPoint:
-    input: list
-    label: float
+class DataSet:
+    inputs: Any
+    labels: Any
+    weights: Any = None
 
 
-dataset = [ [[x], 0.2*x**2 + x  + 0.2*x**3] for x in range(-15, 15) ]
-
-datapoints = np.array([ DataPoint(point[0], point[1]) for point in dataset ])
-
-x = [ point.input[0] for point in datapoints ]
-y = [ point.label for point in datapoints ]
-
-plt.plot(x,y, zorder=0)
 
 
 class Node:
@@ -29,7 +27,7 @@ class Node:
         self.dimension = None
         self.split_value = None
         self.data = data
-        self.mean = np.mean([ point.label for point in data]) #adjust
+        self.mean = np.mean(data.labels) #adjust
         self.left = None
         self.right = None 
 
@@ -46,11 +44,11 @@ class Node:
         '''loops through each dimension of the inputs and each split of the data and returns the one with
             minimal square loss -- needs to be optimised with some analysis'''
         splits = []
-        for dimension in range(len(self.data[0].input)):
-            values = [ datapoint.input[dimension] for datapoint in self.data] # optimise double for
+        for dimension in range(len(self.data.inputs[0])):
+            values = [ input[dimension] for input in self.data.inputs] # optimise double for
             for value in values:
                 split = [dimension, value]
-                left, right = split_data(self.data, np.array([ datapoint.input[dimension] for datapoint in self.data ]) < value)
+                left, right = split_data(self.data, value)
             
                 total_loss = self.loss(left) + self.loss(right)
                 split.append(total_loss)
@@ -65,14 +63,14 @@ class Node:
         if levels == 0:
             print("reached max depth")
             return
+
+        if len(self.data.inputs) == 1 or len(self.data.inputs) == 0: #why is zero necessary
+            return 
+
         dimension, value = self.best_split()
         self.dimension = dimension
 
-        left, right = split_data(self.data, np.array([ datapoint.input[self.dimension] for datapoint in self.data ]) < value)
-
-        if len(left) == 0 or len(right) == 0:
-            print('data no split', self.data)
-            return
+        left, right = split_data(self.data, value)
 
         self.split_value = value
 
@@ -81,14 +79,14 @@ class Node:
         self.left.split_node(levels-1)
         self.right.split_node(levels-1)
 
-    @staticmethod
-    def loss(datapoints):
-        if len(datapoints) == 0:
+    def loss(self, data):
+        if len(data.inputs) == 0:
             return 0
             
-        mean_label = np.mean( [datapoint.label for datapoint in datapoints])
+        mean_label = np.mean(data.labels)
 
-        return 1/len(datapoints)*np.sum([ (datapoint.label - mean_label)**2 for datapoint in datapoints ])
+        return 1/len(data.labels)*np.sum((data.labels - mean_label)**2)
+
 
 
 class Tree:
@@ -107,12 +105,20 @@ class Tree:
 if __name__ == '__main__':
     print("--------------------------START------------------------------------------")
 
-    root_node = Node(datapoints)
-    decision_tree = Tree(root_node, depth=10)
+    inputs = np.array([[x] for x in range(-50, 50)])
+    labels = np.array([x**2 + 0.5*x**3 + 7*x for x in range(-50, 50)])
+    sample_dataset = DataSet(inputs, labels)
+
+    x = [ point[0] for point in inputs ]
+    y = labels
+
+    plt.plot(x,y, zorder=0)
+
+    root_node = Node(sample_dataset)
+    decision_tree = Tree(root_node, depth=5)
     decision_tree.train()
-    inputs = [[pt] for pt in np.linspace(-15, 15, 200)]
+    inputs = [[pt] for pt in np.linspace(-50, 50, 1000)]
 
     outputs = decision_tree.predict(inputs)
-    print(outputs)
     plt.plot(inputs, outputs, 'k')
     plt.show()
