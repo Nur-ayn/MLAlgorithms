@@ -4,24 +4,31 @@ from matplotlib import animation
 from sklearn.datasets import make_blobs
 from itertools import cycle
 
+class Clustering:
+    def __init__(self, data, k):
+        self.data = data
+        self.k = k
+        self.clusters = None
+        self.centroids = None
+        self.lines = lines
+
+
 # DATA
 k = 3
 centers = [(-1, -1), (3, 0), (2, 2)]
 cluster_std = [1.9, 1.5, 2.1]
 
 X, y = make_blobs(n_samples=300, cluster_std=cluster_std, centers=centers, n_features=2, random_state=1)
-
 x_1 = np.concatenate((X[y == 0, 0], X[y == 1, 0], X[y == 2, 0]))
 x_2 = np.concatenate((X[y == 0, 1], X[y == 1, 1], X[y == 2, 1]))
-
 datapoints = np.array([ (x1, x2) for x1, x2 in zip(x_1, x_2)])
+
 
 # PLOTS
 colours = cycle('bgrcmy')
 
 fig = plt.figure()
 ax = plt.axes()
-
 lines = [ax.plot(x_1,x_2, 'o', lw=2,color='k')[0]] + [ ax.plot([],[], 'o', lw=2,color=next(colours))[0] for _ in range(k)]
 
 
@@ -62,34 +69,30 @@ def re_cluster(clusters, data):
 
     return new_clusters, new_centroids
 
-clusters, centroids = None, None
 
 # ANIMATION
+clustering = Clustering(datapoints, k)
+
+def display(clustering):
+        for cluster, line, centroid in zip(clustering.clusters, clustering.lines[1:], clustering.centroids):
+            x1_data = [ pt[0] for pt in cluster ]
+            x2_data = [ pt[1] for pt in cluster ]
+            line.set_data(x1_data, x2_data)
+            print('centroid ', centroid)
+            ax.plot(centroid[0], centroid[1], 'P', mec='black', color=line.get_color(), markersize=10)
 
 def init():
+    clustering.clusters, clustering.centroids = initial_cluster(clustering.data, clustering.k)
+    clustering.lines = lines
     lines[0].set_data(x_1, x_2)
     return lines
 
 def update(i):
     print(i)
-    global clusters, centroids
-    if i == 0:
-        clusters, centroids = initial_cluster(datapoints, k)
-        print('centroids', centroids)
+    display(clustering)
 
-    for cluster, line, centroid in zip(clusters, lines[1:], centroids):
-        x1_data = [ pt[0] for pt in cluster ]
-        x2_data = [ pt[1] for pt in cluster ]
-        line.set_data(x1_data, x2_data)
-        print('centroid ', centroid)
-        ax.plot(centroid[0], centroid[1], 'P', mec='black', color=line.get_color(), markersize=10)
-
-    
-
-    clusters, centroids = re_cluster(clusters, datapoints)
-
-    print('centroids', centroids)
-
+    clustering.clusters, clustering.centroids = re_cluster(clustering.clusters, datapoints)   
+    print('centroids', clustering.centroids)
     return lines
 
 anim = animation.FuncAnimation(fig, update, init_func=init,
