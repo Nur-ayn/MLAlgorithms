@@ -10,7 +10,7 @@ def exponential_cov(x_test, x):
     return np.exp(-0.5*L_2*np.subtract.outer(x_test, x)**2)
 
 def predict(x_test, x_data, y_data, kernel, k):
-    k_star = [ kernel(x_test, x_d) for x_d in x_data ]
+    k_star = kernel(x_test, x_data)
     k_inv = np.linalg.inv(k)
     y_pred = np.dot(k_star, k_inv).dot(y_data)
     sigma_new = kernel(x_test, x_test) - np.dot(k_star, k_inv).dot(k_star)
@@ -18,13 +18,13 @@ def predict(x_test, x_data, y_data, kernel, k):
   
 
 fig = plt.figure(figsize=(8, 6))
-ax = fig.add_subplot(111, facecolor='lightpink')
+ax = fig.add_subplot(111, facecolor='white')
 
 xpts = np.linspace(-3, 3, 1000)
 ypts = np.zeros(len(xpts))
 sigma_0 = exponential_cov(0, 0)
 
-errorbar = ax.errorbar(xpts, ypts, yerr=sigma_0, mfc='indianred', mec='darkred', ecolor='lightcoral', marker='o', markersize=3, linestyle='None', capsize=0.5)
+errorbar = ax.errorbar(xpts, ypts, yerr=sigma_0, ecolor='lightblue', marker='o', markersize=3, linestyle='None', capsize=0.5)
 ln, cap, bar = errorbar
 ax.set_title('Nonlinear Regression with a Gaussian Process')
 ax.set_xlabel('x')
@@ -44,7 +44,7 @@ def on_press(event):
         y_pred, sigmas = np.transpose(predictions)
         ln.set_data(xpts, y_pred)
         adjust_yerr(errorbar, sigmas)
-        ax.plot(x,y, 'P', color='yellow', markersize=5, zorder=5)
+        ax.plot(x,y, 'P', color='orange', markersize=5, zorder=5)
         plt.pause(0.5)
 
 pressID = fig.canvas.mpl_connect('button_press_event', on_press)
